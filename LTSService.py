@@ -47,7 +47,6 @@ def add_array(data):
     return padder(data_dict)['image'].unsqueeze(0)
 
 
-@st.cache_data
 def load_file(file):
     nii_bytes = file.read()
     nii_image = nb.Nifti1Image.from_bytes(nii_bytes)
@@ -105,8 +104,8 @@ strides=(2, 2, 2, 2),
 
 ).to(device).to(torch.float64)
 
-# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-# loss_function = monai.losses.DiceLoss(sigmoid=True)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+loss_function = monai.losses.DiceLoss
 
 model.load_state_dict(torch.load("unet_model.pth"))
 
@@ -115,9 +114,9 @@ best_jaccard = 0
 
 st.title("Liver Segmentation Service")
 
-if st.button("Clean Cache"):
-    st.cache_data.clear()
-    st.success("Cache has been cleared")
+# if st.button("Clean Cache"):
+#     st.cache_data.clear()
+#     st.success("Cache has been cleared")
 
 ct_file = st.file_uploader("Upload a CT scan")
 mask_file = st.file_uploader("Upload a mask (optional)")
