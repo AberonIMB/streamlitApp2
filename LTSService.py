@@ -47,6 +47,7 @@ def add_array(data):
     return padder(data_dict)['image'].unsqueeze(0)
 
 
+@st.cache_data
 def load_file(file):
     nii_bytes = file.read()
     nii_image = nb.Nifti1Image.from_bytes(nii_bytes)
@@ -60,17 +61,17 @@ def change_ct(scan, pred, value):
     return copy_scan
 
 
-def clean_pred(pred):
-    labels, num_labels = label(pred)
-    if num_labels == 0:
-        return pred
-    sizes = np.bincount(labels.ravel())
-    max_label = sizes[1:].argmax() + 1  # Пропускаем фон
+# def clean_pred(pred):
+#     labels, num_labels = label(pred)
+#     if num_labels == 0:
+#         return pred
+#     sizes = np.bincount(labels.ravel())
+#     max_label = sizes[1:].argmax() + 1  # Пропускаем фон
 
-    largest_object = np.zeros_like(pred)
-    largest_object[labels == max_label] = 1
+#     largest_object = np.zeros_like(pred)
+#     largest_object[labels == max_label] = 1
 
-    return largest_object
+#     return largest_object
 
 
 def show_slise(image, str):
@@ -104,8 +105,8 @@ strides=(2, 2, 2, 2),
 
 ).to(device).to(torch.float64)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-loss_function = monai.losses.DiceLoss(sigmoid=True)
+# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+# loss_function = monai.losses.DiceLoss(sigmoid=True)
 
 model.load_state_dict(torch.load("unet_model.pth"))
 
@@ -113,6 +114,11 @@ thresholds = np.concatenate((np.linspace(0.1, 0.9, 9), np.linspace(0.01, 0.09, 9
 best_jaccard = 0
 
 st.title("Liver Segmentation Service")
+
+if st.button("Clean Cache"):
+    st.cache_data.clear()
+    st.success("Cache has been cleared")
+
 ct_file = st.file_uploader("Upload a CT scan")
 mask_file = st.file_uploader("Upload a mask (optional)")
 mask_slices = []
@@ -136,7 +142,7 @@ if ct_file is not None:
         pred[pred < 0.5] = 0
 
     ct_slices = [image[0, 0, :, :, i] for i in range(num_slices)]
-    pred_slices = [clean_pred(pred[0, 0, :, :, i]) for i in range(num_slices)]
+    pred_slices = [pred[0, 0, :, :, i] for i in range(num_slices)]
     result_slices = [change_ct(ct_slice, pred_slice, np.max(ct_slice) * 1.5) for ct_slice, pred_slice in zip(ct_slices, pred_slices)]
 
     slice_index = st.slider("Select slice", 0, num_slices - 1)
